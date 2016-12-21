@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>jQuery</title>
+    <script src="http://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.css" />
+    <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid-theme.min.css" />
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jsgrid/1.5.3/jsgrid.min.js"></script>
+    <script>
+
+        $(document).ready(function () {
+            var alltdata = null;
+            function callback(data) {
+                var alldata = data.transactions;
+                alltdata = alldata;
+                var outdata = processing(alltdata, false, false);
+                $("#jsGrid").jsGrid({
+                    width: "100%",
+                    height: "400px",
+                    sorting: true,
+                    paging: true,
+                    data: outdata,
+                    fields: [
+                        { name: "year_month", type: "text" },
+                        { name: "spent", type: "text" },
+                        { name: "income", type: "text" }
+                    ]
+                });
+
+            }
+            $("#tranview").html("all transactions included");
+            var args = { "args": { "uid": 1110590645, "token": "9A8F6D8E0DFDEDF14328302FB1E2333C", "api-token": "AppTokenForInterview", "json-strict-mode": false, "json-verbose-response": false } };
+            $.ajax({
+                url: 'https://2016.api.levelmoney.com/api/v2/core/get-all-transactions',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                contentType: 'application/json',
+                crossDomain: true,
+                method: 'POST',
+                dataType: 'json',
+                data: JSON.stringify(args),
+                success: callback
+                //success: function (data) {
+                //    //console.log(JSON.stringify(data.transactions));
+                //    //console.log(data.transactions);
+                //    var alldata = data.transactions;
+                //    alldata.forEach(function (c,i,a) {
+                //        console.log(c);
+                //    });
+                //    $("#jsGrid").jsGrid({
+                //        width: "100%",
+                //        height: "400px",
+                //        //inserting: true,
+                //        //editing: true,
+                //        sorting: true,
+                //        paging: true,
+                //        data: data.transactions,
+                //        fields: [
+                //            { name: "transaction-time", type: "text" },
+                //            { name: "amount", type: "number" },
+                //            { name: "merchant", type: "text" },
+                //            { name: "categorization", type: "text" },
+                //            { name: "is-pending", type: "checkbox", width: 50 }
+                //        ]
+                //    });
+                //}
+            });
+
+
+
+            $("#ignoredonutsButton1").click(function () {
+
+                $("#tranview1").html("without donuts payments");
+                var outdata = processing(alltdata, true, false);
+                $("#jsGrid1").jsGrid({
+                    width: "100%",
+                    height: "400px",
+                    sorting: true,
+                    paging: true,
+                    data: outdata,
+                    fields: [
+                        { name: "year_month", type: "text" },
+                        { name: "spent", type: "text" },
+                        { name: "income", type: "text" }
+                    ]
+                });
+
+
+                $("#jsGrid2").jsGrid("destroy");
+
+            });
+
+            $("#ignoreccpaymentsButton2").click(function () {
+                $("#tranview1").html("without all cc payments");
+                var outdata = processing(alltdata, false, true);
+                $("#jsGrid1").jsGrid({
+                    width: "100%",
+                    height: "400px",
+                    sorting: true,
+                    paging: true,
+                    data: outdata,
+                    fields: [
+                        { name: "year_month", type: "text" },
+                        { name: "spent", type: "text" },
+                        { name: "income", type: "text" }
+                    ]
+                });
+
+                var ccpayments = [];
+                alltdata.forEach(function (c, i, a) {
+                    if (c.merchant == 'CC Payment' || c.merchant == 'Credit Card Payment') {
+                        ccpayments.push(c);
+                    }
+                });
+                $("#tranview2").html("all cc payments");
+                $("#jsGrid2").jsGrid({
+                    width: "100%",
+                    height: "400px",
+                    //filtering: true,
+                    //inserting: true,
+                    //editing: true,
+                    sorting: true,
+                    paging: true,
+
+                    data: ccpayments,
+
+                    fields: [
+                        { name: "transaction-time", type: "text" },
+                        { name: "amount", type: "number" },
+                        { name: "merchant", type: "text" },
+                        { name: "categorization", type: "text" },
+                        { name: "is-pending", type: "checkbox", width: 50 }
+
+
+                    ]
+                });
+
+            });
+
+            function processing(data, ignoredonuts, ignoreccpayments) {
+                var output = {};
+                var output1 = [];
+                data.forEach(function (element) {
+                    if (element.merchant == 'Krispy Kreme Donuts' || element.merchant == 'DUNKIN #336784') {
+                        //console.log(element);
+                    }
+                    var date_str = element['transaction-time'];
+                    var date_oj = new Date(date_str);
+                    var months = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+                    var year_month = date_oj.getFullYear() + '-' + months[date_oj.getMonth()];
+
+                    //if date key exists, add values, else create key and add values
+                    if (year_month in output) {
+                        if (ignoredonuts) {
+                            if (!(element.merchant == 'Krispy Kreme Donuts' || element.merchant == 'DUNKIN #336784')) {
+                                if (element['amount'] <= 0) {
+                                    output[year_month]['spent'] += Math.abs(element['amount']);
+                                }
+                                else {
+                                    output[year_month]['income'] += element['amount'];
+                                }
+                            }
+                        }
+                        if (ignoreccpayments) {
+                            if (!(element.merchant == 'CC Payment' || element.merchant == 'Credit Card Payment')) {
+                                if (element['amount'] <= 0) {
+                                    output[year_month]['spent'] += Math.abs(element['amount']);
+                                }
+                                else {
+                                    output[year_month]['income'] += element['amount'];
+                                }
+                            }
+                        }
+                        if (!ignoredonuts && !ignoreccpayments) {
+                            if (element['amount'] <= 0) {
+                                output[year_month]['spent'] += Math.abs(element['amount']);
+                            }
+                            else {
+                                output[year_month]['income'] += element['amount'];
+                            }
+                        }
+                    }
+                    else {
+                        if (ignoredonuts) {
+                            if (!(element.merchant == 'Krispy Kreme Donuts' || element.merchant == 'DUNKIN #336784')) {
+                                if (element['amount'] <= 0) {
+                                    output[year_month] = {
+                                        'year_month': year_month,
+                                        'spent': Math.abs(element['amount']),
+                                        'income': 0
+                                    };
+                                }
+                                else {
+                                    output[year_month] = {
+                                        'year_month': year_month,
+                                        'spent': 0,
+                                        'income': element['amount']
+                                    };
+                                }
+
+                            }
+
+                        }
+                        if (ignoreccpayments) {
+                            if (!(element.merchant == 'CC Payment' || element.merchant == 'Credit Card Payment')) {
+                                if (element['amount'] <= 0) {
+                                    output[year_month] = {
+                                        'year_month': year_month,
+                                        'spent': Math.abs(element['amount']),
+                                        'income': 0
+                                    };
+                                }
+                                else {
+                                    output[year_month] = {
+                                        'year_month': year_month,
+                                        'spent': 0,
+                                        'income': element['amount']
+                                    };
+                                }
+                            }
+                        }
+                        if (!ignoredonuts && !ignoreccpayments) {
+                            if (element['amount'] <= 0) {
+                                output[year_month] = {
+                                    'year_month': year_month,
+                                    'spent': Math.abs(element['amount']),
+                                    'income': 0
+                                };
+                            }
+                            else {
+                                output[year_month] = {
+                                    'year_month': year_month,
+                                    'spent': 0,
+                                    'income': element['amount']
+                                };
+                            }
+                        }
+                    }
+                });
+
+                var aspent = 0;
+                var aincome = 0;
+                for (var key in output) {
+                    if (output.hasOwnProperty(key)) {
+                        aspent += output[key].spent / 10000;
+                        aincome += output[key].income / 10000;
+                        output[key].spent = '$' + output[key].spent / 10000;
+                        output[key].income = '$' + output[key].income / 10000;
+                        output1.push(output[key]);
+
+
+                    }
+                }
+
+                var avalue = { 'year_month': 'average', 'spent': aspent / output1.length, 'income': aincome / output1.length };
+                output1.unshift(avalue);
+
+                return output1;
+            }
+
+        });
+    </script>
+</head>
+<body>
+
+<button id="ignoredonutsButton1">ignore donuts</button>
+<button id="ignoreccpaymentsButton2">ignore cc payments</button>
+</br>
+<div id="tranview"></div>
+<div id="jsGrid"></div>
+</br>
+<div id="tranview1"></div>
+<div id="jsGrid1"></div>
+</br>
+<div id="tranview2"></div>
+<div id="jsGrid2"></div>
+
+</body>
+</html>
